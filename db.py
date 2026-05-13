@@ -80,3 +80,15 @@ def run_matching_engine():
                 return True
     except Exception as e:
         return False
+
+def execute_direct_purchase(oferta_id, comprador_id):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Chama a Stored Procedure ACID criada no DBeaver
+                cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", [oferta_id, comprador_id])
+                conn.commit()
+                return True
+    except Exception as e:
+        print(f"Erro na compra direta: {e}")
+        return False
