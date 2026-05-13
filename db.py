@@ -86,9 +86,9 @@ def execute_direct_purchase(oferta_id, comprador_id):
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", [oferta_id, comprador_id])
-                # MUITO IMPORTANTE:
+                # ESTA LINHA É OBRIGATÓRIA:
                 conn.commit() 
-                return True
+                return True, "Sucesso"
     except Exception as e:
-        print(f"Erro na BD: {e}")
-        return False
+        # Se der o erro 'OFERTA_INDISPONIVEL', ele cai aqui
+        return False, str(e)
