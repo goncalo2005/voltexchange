@@ -57,12 +57,12 @@ def force_match():
 @auth_required
 def buy_energy():
     data = request.get_json()
-    oferta_id = data.get('oferta_id')
-    comprador_id = request.user_id # Usa o ID do utilizador autenticado pelo Token
-
-    if db.execute_direct_purchase(oferta_id, comprador_id):
-        return jsonify({"message": "Compra efetuada com sucesso (ACID)"}), 200
-    return jsonify({"error": "Falha na transação. Verifique o saldo ou estado da oferta."}), 400
-
+    try:
+        # Tenta executar a compra [cite: 36, 61]
+        db.execute_direct_purchase(data.get('oferta_id'), request.user_id)
+        return jsonify({"message": "Compra efetuada"}), 200
+    except Exception as e:
+        # Mostra o erro real da base de dados no Postman
+        return jsonify({"error": str(e)}), 400
 if __name__ == "__main__":
     app.run(debug=True)
