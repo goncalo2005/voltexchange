@@ -85,10 +85,11 @@ def execute_direct_purchase(oferta_id, comprador_id):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
+                # Executa a procedure
                 cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", [oferta_id, comprador_id])
-                # ESTA LINHA É OBRIGATÓRIA:
+                # ESTA LINHA É O QUE GRAVA OS DADOS NO DBEAVER:
                 conn.commit() 
-                return True, "Sucesso"
+                return True
     except Exception as e:
-        # Se der o erro 'OFERTA_INDISPONIVEL', ele cai aqui
-        return False, str(e)
+        print(f"Erro na transação: {e}")
+        return False
