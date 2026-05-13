@@ -85,13 +85,10 @@ def execute_direct_purchase(oferta_id, comprador_id):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # O Python inicia a transação aqui
                 cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", (oferta_id, comprador_id))
-                
-                # O Python encerra a transação com sucesso aqui
-                conn.commit() 
-                return True
+                conn.commit()
+                return True, "Sucesso"
     except Exception as e:
-        print(f"Erro Real na BD: {e}")
-        return False
-        return False
+        # Isto vai imprimir o erro do 'RAISE EXCEPTION' no teu terminal/log do Vercel
+        print(f"ERRO DE BASE DE DADOS: {e}")
+        return False, str(e)
