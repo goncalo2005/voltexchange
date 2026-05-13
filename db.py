@@ -33,7 +33,7 @@ def add_reading(data, user_id):
                 if not contador: return None
 
                 audit_data = {
-                    "temperatura": data.get("temperatura", 25),
+                    "temperatura": data.get("temperatura"),
                     "voltagem": data.get("voltagem", 230),
                     "erro_codigo": data.get("erro_codigo")
                 }
@@ -58,14 +58,17 @@ def get_anomalies():
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Usamos ::float para garantir que valores como 85.0 são lidos
+                # E verificamos se a chave existe (JSONB GIN index friendly)
                 cur.execute("""
                     SELECT c.NumeroSerie, l.* FROM Leituras l
                     JOIN Contadores c ON l.ContadorID = c.ContadorID
-                    WHERE (l.DadosAudit->>'temperatura')::int > 80 
-                       OR l.DadosAudit->>'erro_codigo' IS NOT NULL
+                    WHERE (l.DadosAudit->>'temperatura')::float > 80 
+                       OR l.DadosAudit ? 'erro_codigo'
                 """)
                 return cur.fetchall()
     except Exception as e:
+        print(f"Erro na query de anomalias: {e}")
         return []
 
 def run_matching_engine():
