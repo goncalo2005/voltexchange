@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS # Recomendado para o Vercel
+from flask_cors import CORS
 import db
 import jwt
 import os
@@ -49,6 +49,7 @@ def get_anomalies():
 
 @app.route('/api/market/match', methods=['POST'])
 def force_match():
+    # Endpoint obrigatório para o docente forçar o matching [cite: 35]
     if db.run_matching_engine():
         return jsonify({"message": "Matching engine executado com sucesso"})
     return jsonify({"error": "Falha ao executar motor"}), 500
