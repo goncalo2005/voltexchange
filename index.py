@@ -54,15 +54,21 @@ def force_match():
     return jsonify({"error": "Falha no motor"}), 500
 
 @app.route('/api/market/buy', methods=['POST'])
-@auth_required
+@auth_required # Garante que o token é válido e extrai o user_id
 def buy_energy():
     data = request.get_json()
-    try:
-        # Tenta executar a compra [cite: 36, 61]
-        db.execute_direct_purchase(data.get('oferta_id'), request.user_id)
-        return jsonify({"message": "Compra efetuada"}), 200
-    except Exception as e:
-        # Mostra o erro real da base de dados no Postman
-        return jsonify({"error": str(e)}), 400
+    oferta_id = data.get('oferta_id')
+    
+    # PEGA O ID DO TOKEN (Segurança Máxima)
+    comprador_id = request.user_id 
+
+    if not oferta_id:
+        return jsonify({"error": "Deve escolher uma oferta"}), 400
+
+    # Chama a procedure que faz a verificação de dinheiro e o desconto
+    if db.execute_direct_purchase(oferta_id, comprador_id):
+        return jsonify({"message": "Compra realizada com sucesso e saldo atualizado!"}), 200
+    
+    return jsonify({"error": "Falha na compra. Verifique o seu saldo ou se a oferta ainda está ativa."}), 400
 if __name__ == "__main__":
     app.run(debug=True)
