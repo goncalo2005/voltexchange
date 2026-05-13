@@ -49,10 +49,9 @@ def get_anomalies():
 
 @app.route('/api/market/match', methods=['POST'])
 def force_match():
-    # Endpoint obrigatório para o docente forçar o matching [cite: 35]
     if db.run_matching_engine():
-        return jsonify({"message": "Matching engine executado com sucesso"})
-    return jsonify({"error": "Falha ao executar motor"}), 500
+        return jsonify({"message": "Matching executado"})
+    return jsonify({"error": "Falha no motor"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
