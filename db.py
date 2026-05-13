@@ -17,7 +17,7 @@ def login(email, password):
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # O PostgreSQL devolve nomes de colunas em minúsculas por padrão no RealDictCursor
+                # PostgreSQL devolve minúsculas por padrão
                 cur.execute("SELECT utilizadorid, nome, email, saldo FROM Utilizadores WHERE Email = %s AND PasswordHash = crypt(%s, PasswordHash)", [email, password])
                 return cur.fetchone()
     except Exception as e:
@@ -28,19 +28,17 @@ def add_reading(data, user_id):
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # 1. Procurar o ContadorID associado ao UtilizadorID 
                 cur.execute("SELECT contadorid FROM Contadores WHERE utilizadorid = %s LIMIT 1", [user_id])
                 contador = cur.fetchone()
                 if not contador: return None
 
-                # 2. Criar o objeto JSONB para o campo DadosAudit [cite: 27, 41]
                 audit_data = {
                     "temperatura": data.get("temperatura", 25),
                     "voltagem": data.get("voltagem", 230),
                     "erro_codigo": data.get("erro_codigo")
                 }
                 
-                # 3. Inserir na tabela Leituras respeitando o particionamento [cite: 26, 41]
+                # Nomes exatos: ContadorID, DataHora, KWh_Leitura, DadosAudit
                 cur.execute("""
                     INSERT INTO Leituras (ContadorID, DataHora, KWh_Leitura, DadosAudit) 
                     VALUES (%s, %s, %s, %s) RETURNING *
@@ -60,7 +58,6 @@ def get_anomalies():
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Query JSONB otimizada conforme requisito 3.3 [cite: 27, 28, 32]
                 cur.execute("""
                     SELECT c.NumeroSerie, l.* FROM Leituras l
                     JOIN Contadores c ON l.ContadorID = c.ContadorID
@@ -75,7 +72,6 @@ def run_matching_engine():
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # Chama a Procedure obrigatória sp_MatchingEngine [cite: 17, 35]
                 cur.execute("CALL sp_MatchingEngine()")
                 conn.commit()
                 return True
