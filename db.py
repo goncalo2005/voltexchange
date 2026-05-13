@@ -82,14 +82,21 @@ def run_matching_engine():
         return False
 
 def execute_direct_purchase(oferta_id, comprador_id):
+    conn = get_connection()
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                # Executa a procedure
-                cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", [oferta_id, comprador_id])
-                # ESTA LINHA É O QUE GRAVA OS DADOS NO DBEAVER:
-                conn.commit() 
-                return True
+        cur = conn.cursor()
+        # Chama a procedure
+        cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", (oferta_id, comprador_id))
+        
+        # 1. COMMIT DA PROCEDURE (Caso o Python controle a transação)
+        conn.commit() 
+        
+        cur.close()
+        return True
     except Exception as e:
-        print(f"Erro na transação: {e}")
+        # Se der erro, desfaz
+        conn.rollback()
+        print(f"Erro na BD: {e}")
         return False
+    finally:
+        conn.close()
