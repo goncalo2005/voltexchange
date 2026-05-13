@@ -53,5 +53,16 @@ def force_match():
         return jsonify({"message": "Matching executado"})
     return jsonify({"error": "Falha no motor"}), 500
 
+@app.route('/api/market/buy', methods=['POST'])
+@auth_required
+def buy_energy():
+    data = request.get_json()
+    oferta_id = data.get('oferta_id')
+    comprador_id = request.user_id # Usa o ID do utilizador autenticado pelo Token
+
+    if db.execute_direct_purchase(oferta_id, comprador_id):
+        return jsonify({"message": "Compra efetuada com sucesso (ACID)"}), 200
+    return jsonify({"error": "Falha na transação. Verifique o saldo ou estado da oferta."}), 400
+
 if __name__ == "__main__":
     app.run(debug=True)
