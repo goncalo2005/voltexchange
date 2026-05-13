@@ -82,21 +82,17 @@ def run_matching_engine():
         return False
 
 def execute_direct_purchase(oferta_id, comprador_id):
-    conn = get_connection()
     try:
+        conn = get_connection()
         cur = conn.cursor()
-        # Chama a procedure
         cur.execute("CALL sp_ExecutarCompraDireta(%s, %s)", (oferta_id, comprador_id))
         
-        # 1. COMMIT DA PROCEDURE (Caso o Python controle a transação)
+        # SEM ESTA LINHA, O DBEAVER NUNCA ATUALIZA:
         conn.commit() 
         
         cur.close()
+        conn.close()
         return True
     except Exception as e:
-        # Se der erro, desfaz
-        conn.rollback()
-        print(f"Erro na BD: {e}")
+        print(f"ERRO REAL: {e}") # Verifica isto nos logs do Vercel!
         return False
-    finally:
-        conn.close()
