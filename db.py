@@ -1,5 +1,6 @@
 import os
 import psycopg2
+import json
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
@@ -16,8 +17,8 @@ def login(email, password):
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Usa crypt para validar o hash da password [cite: 10, 30]
-                cur.execute("SELECT UtilizadorID, Nome, Email, Saldo FROM Utilizadores WHERE Email = %s AND PasswordHash = crypt(%s, PasswordHash)", [email, password])
+                # O PostgreSQL devolve nomes de colunas em minúsculas por padrão no RealDictCursor
+                cur.execute("SELECT utilizadorid, nome, email, saldo FROM Utilizadores WHERE Email = %s AND PasswordHash = crypt(%s, PasswordHash)", [email, password])
                 return cur.fetchone()
     except Exception as e:
         print(f"Erro no login: {e}")
@@ -27,27 +28,26 @@ def add_reading(data, user_id):
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # 1. Procurar o ContadorID do utilizador
-                cur.execute("SELECT ContadorID FROM Contadores WHERE UtilizadorID = %s LIMIT 1", [user_id])
+                # 1. Procurar o ContadorID associado ao UtilizadorID 
+                cur.execute("SELECT contadorid FROM Contadores WHERE utilizadorid = %s LIMIT 1", [user_id])
                 contador = cur.fetchone()
                 if not contador: return None
 
-                # 2. Inserir respeitando as colunas exatas: ContadorID, DataHora, KWh_Leitura, DadosAudit [cite: 41]
-                # Criamos um JSON com temperatura/voltagem para o DadosAudit 
+                # 2. Criar o objeto JSONB para o campo DadosAudit [cite: 27, 41]
                 audit_data = {
                     "temperatura": data.get("temperatura", 25),
                     "voltagem": data.get("voltagem", 230),
                     "erro_codigo": data.get("erro_codigo")
                 }
                 
-                import json
+                # 3. Inserir na tabela Leituras respeitando o particionamento [cite: 26, 41]
                 cur.execute("""
                     INSERT INTO Leituras (ContadorID, DataHora, KWh_Leitura, DadosAudit) 
                     VALUES (%s, %s, %s, %s) RETURNING *
                 """, [
                     contador['contadorid'], 
                     datetime.now(), 
-                    data.get('valor_kwh'), 
+                    data.get('kwh_leitura'), 
                     json.dumps(audit_data)
                 ])
                 conn.commit()
@@ -60,7 +60,7 @@ def get_anomalies():
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Query JSONB otimizada pedida pelo professor [cite: 32, 27]
+                # Query JSONB otimizada conforme requisito 3.3 [cite: 27, 28, 32]
                 cur.execute("""
                     SELECT c.NumeroSerie, l.* FROM Leituras l
                     JOIN Contadores c ON l.ContadorID = c.ContadorID
@@ -75,6 +75,7 @@ def run_matching_engine():
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
+                # Chama a Procedure obrigatória sp_MatchingEngine [cite: 17, 35]
                 cur.execute("CALL sp_MatchingEngine()")
                 conn.commit()
                 return True
